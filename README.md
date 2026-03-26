@@ -1,15 +1,9 @@
 # api-verifier
 
-To install dependencies:
+Verify if the provided LLM API is compatible with Vercel AI SDk.
+
+## Usage
 
 ```bash
-bun install
+bunx @bitrouter.ai/api-verifier --help
 ```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.3.10. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.

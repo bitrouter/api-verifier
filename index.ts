@@ -43,7 +43,7 @@ function parseArgs(): Config {
 
   if (argv.includes("--help") || argv.includes("-h")) {
     console.log(`
-Usage: api-verifier --type <type> --api-base <url> --api-key <key> --model <model> [--test <test>]...
+Usage: bunx @bitrouter.ai/api-verifier --type <type> --api-base <url> --api-key <key> --model <model> [--test <test>]...
 
 Options:
   --type      API type: openai.chat | openai.responses | anthropic
@@ -164,8 +164,10 @@ async function runStreamTools(model: ReturnType<typeof createModel>): Promise<st
     stopWhen: stepCountIs(3),
   });
   // consume the full stream
-  for await (const _ of result.fullStream) { /* drain */ }
-  const toolCalls = (await result.toolCalls);
+  for await (const _ of result.fullStream) {
+    /* drain */
+  }
+  const toolCalls = await result.toolCalls;
   if (toolCalls.length === 0) throw new Error("Model did not call any tools");
   const text = (await result.text).trim().slice(0, 80);
   return `tool_calls=${toolCalls.length} text="${text}"`;
@@ -178,10 +180,18 @@ async function runTest(name: TestName, model: ReturnType<typeof createModel>): P
   try {
     let output: string;
     switch (name) {
-      case "text":        output = await runText(model); break;
-      case "stream":      output = await runStream(model); break;
-      case "text-tools":  output = await runTextTools(model); break;
-      case "stream-tools":output = await runStreamTools(model); break;
+      case "text":
+        output = await runText(model);
+        break;
+      case "stream":
+        output = await runStream(model);
+        break;
+      case "text-tools":
+        output = await runTextTools(model);
+        break;
+      case "stream-tools":
+        output = await runStreamTools(model);
+        break;
     }
     return { name, passed: true, output, durationMs: Date.now() - start };
   } catch (err) {
@@ -227,6 +237,8 @@ for (const testName of config.tests) {
 const passed = results.filter((r) => r.passed).length;
 const failed = results.filter((r) => !r.passed).length;
 
-console.log(`\n${BOLD}Results: ${passed === results.length ? GREEN : RED}${passed}/${results.length} passed${RESET}\n`);
+console.log(
+  `\n${BOLD}Results: ${passed === results.length ? GREEN : RED}${passed}/${results.length} passed${RESET}\n`,
+);
 
 process.exit(failed > 0 ? 1 : 0);
