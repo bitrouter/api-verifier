@@ -260,8 +260,14 @@ for (const testName of config.tests) {
     if (result.output) console.log(`    ${DIM}→ ${result.output}${RESET}`);
   } else {
     console.log(`${RED}✗ failed${RESET} ${DIM}(${result.durationMs}ms)${RESET}`);
-    const indented = result.error!.split("\n").map((l) => `    ${l}`).join("\n");
-    console.log(`${RED}${indented}${RESET}`);
+    const lines = result.error!.split("\n");
+    console.log(`${RED}    ${lines[0]}${RESET}`);
+    if (lines.length > 1) {
+      const body = lines.slice(1).join("\n");
+      console.log(`${DIM}\`\`\`${RESET}`);
+      console.log(`${DIM}${body}${RESET}`);
+      console.log(`${DIM}\`\`\`${RESET}`);
+    }
   }
 }
 
