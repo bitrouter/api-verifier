@@ -6,6 +6,9 @@
   "bin": {
     "api-verifier": "./index.ts"
   },
+  "repository": {
+    "url": "https://github.com/bitrouter/api-verifier"
+  },
   "scripts": {
     "format": "prettier -w ."
   },
