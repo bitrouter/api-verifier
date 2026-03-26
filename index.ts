@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 import { generateText, streamText, tool, stepCountIs } from "ai";
+import { AISDKError, APICallError } from "@ai-sdk/provider";
+import { RetryError } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
@@ -173,6 +175,34 @@ async function runStreamTools(model: ReturnType<typeof createModel>): Promise<st
   return `tool_calls=${toolCalls.length} text="${text}"`;
 }
 
+// ─── Error formatting ─────────────────────────────────────────────────────────
+
+function formatApiCallError(err: APICallError): string {
+  const status = err.statusCode ? `HTTP ${err.statusCode}` : "HTTP error";
+  if (!err.responseBody?.trim()) return `${status}: ${err.message}`;
+
+  let body: string;
+  try {
+    body = JSON.stringify(JSON.parse(err.responseBody), null, 2);
+  } catch {
+    body = err.responseBody.trim();
+  }
+  return `${status}: ${err.message}\n${body}`;
+}
+
+function formatError(err: unknown): string {
+  if (RetryError.isInstance(err)) {
+    const last = (err as RetryError).lastError;
+    if (APICallError.isInstance(last)) return formatApiCallError(last);
+    if (AISDKError.isInstance(last)) return `${last.name}: ${last.message}`;
+    if (last instanceof Error) return last.message;
+  }
+  if (APICallError.isInstance(err)) return formatApiCallError(err);
+  if (AISDKError.isInstance(err)) return `${err.name}: ${err.message}`;
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
+
 // ─── Runner ───────────────────────────────────────────────────────────────────
 
 async function runTest(name: TestName, model: ReturnType<typeof createModel>): Promise<TestResult> {
@@ -195,7 +225,7 @@ async function runTest(name: TestName, model: ReturnType<typeof createModel>): P
     }
     return { name, passed: true, output, durationMs: Date.now() - start };
   } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
+    const error = formatError(err);
     return { name, passed: false, error, durationMs: Date.now() - start };
   }
 }
@@ -230,7 +260,8 @@ for (const testName of config.tests) {
     if (result.output) console.log(`    ${DIM}→ ${result.output}${RESET}`);
   } else {
     console.log(`${RED}✗ failed${RESET} ${DIM}(${result.durationMs}ms)${RESET}`);
-    console.log(`    ${RED}${result.error}${RESET}`);
+    const indented = result.error!.split("\n").map((l) => `    ${l}`).join("\n");
+    console.log(`${RED}${indented}${RESET}`);
   }
 }
 
